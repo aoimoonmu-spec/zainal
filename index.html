@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="在哪">
 <meta name="theme-color" content="#22c55e">
-<link id="pwa-manifest" rel="manifest">
-<link rel="apple-touch-icon" id="apple-icon">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>在哪</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -322,6 +322,7 @@ let lastItem = null;   // last item mentioned in conversation
 let pendingDup = null; // { item, location, existingKey }
 let recog = null;
 let micOn = false;
+let gotResult = false;
 let bubbleTimer = null;
 
 // ═══════════════════════════ NLP ════════════════════════════
@@ -489,18 +490,20 @@ function initRecog(){
   const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR) return null;
   const r = new SR();
-  r.lang='zh-CN'; r.continuous=false; r.interimResults=true; r.maxAlternatives=1;
-  r.onstart=()=>{ micOn=true; setMicUI(true); setStatus('正在听…'); };
+  r.lang='zh-CN'; r.continuous=false; r.interimResults=true; r.maxAlternatives=3;
+  r.onstart=()=>{ micOn=true; gotResult=false; setMicUI(true); setStatus('正在听，请说话…'); };
   r.onresult=(e)=>{
+    gotResult=true;
     const res=e.results[e.results.length-1];
     const txt=res[0].transcript;
     if(res.isFinal){ setStatus(`"${txt}"`); run(txt); }
     else setStatus(txt+'…');
   };
+  r.onnomatch=()=>{ setStatus('没有匹配到，请重试'); };
   r.onerror=(e)=>{
-    micOn=false; setMicUI(false);
+    micOn=false; setMicUI(false); gotResult=false;
     if(e.error==='no-speech'){
-      setStatus('没有检测到声音');
+      setStatus('没有听到声音，请重试');
     } else if(e.error==='not-allowed' || e.error==='service-not-allowed'){
       setStatus('麦克风被拒绝（'+e.error+'）');
       if(location.protocol==='file:'){
@@ -512,7 +515,11 @@ function initRecog(){
       setStatus('语音错误：'+e.error);
     }
   };
-  r.onend=()=>{ micOn=false; setMicUI(false); };
+  r.onend=()=>{
+    micOn=false; setMicUI(false);
+    if(!gotResult) setStatus('未听到内容，请再试一次');
+    gotResult=false;
+  };
   return r;
 }
 
@@ -656,57 +663,9 @@ if(location.protocol==='file:'){
     '⚠️ 本地文件语音受限，请使用<b style="color:#fff">文字输入框</b>';
 }
 
-// ─── PWA manifest (inline, works as single file) ───
-(function(){
-  const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-    <rect width="512" height="512" rx="112" fill="#22c55e"/>
-    <ellipse cx="256" cy="320" rx="195" ry="165" fill="#ffb3c6"/>
-    <ellipse cx="165" cy="295" rx="35" ry="26" fill="#ff8fab" opacity=".45"/>
-    <ellipse cx="347" cy="295" rx="35" ry="26" fill="#ff8fab" opacity=".45"/>
-    <path d="M200 270 Q220 252 240 270" stroke="#333" stroke-width="8" fill="none" stroke-linecap="round"/>
-    <path d="M272 270 Q292 252 312 270" stroke="#333" stroke-width="8" fill="none" stroke-linecap="round"/>
-    <path d="M215 308 Q256 338 297 308" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
-    <text x="256" y="130" text-anchor="middle" font-family="PingFang SC,sans-serif"
-      font-size="100" font-weight="900" fill="white">在哪</text>
-  </svg>`;
-  const iconUrl = 'data:image/svg+xml,' + encodeURIComponent(iconSvg);
-  document.getElementById('apple-icon').href = iconUrl;
-
-  const manifest = {
-    name: '在哪 — 找东西神器',
-    short_name: '在哪',
-    description: '语音记录物品位置，随时查找',
-    start_url: './',
-    display: 'standalone',
-    orientation: 'portrait',
-    background_color: '#22c55e',
-    theme_color: '#22c55e',
-    lang: 'zh-CN',
-    icons: [
-      { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }
-    ]
-  };
-  const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
-  document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
-})();
-
-// ─── Service Worker (offline support) ───
+// ─── Service Worker ───
 if('serviceWorker' in navigator && location.protocol !== 'file:'){
-  const swCode = `
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open('zainal-v1').then(c => c.addAll(['./', './index.html']))
-      .catch(()=>{})
-  );
-  self.skipWaiting();
-});
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('./')))
-  );
-});`;
-  const swBlob = new Blob([swCode], {type:'text/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 
 // Close records on outside tap
