@@ -1,0 +1,16 @@
+{
+  "name": "在哪 — 找东西神器",
+  "short_name": "在哪",
+  "description": "语音记录物品位置，随时查找",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#22c55e",
+  "theme_color": "#22c55e",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
