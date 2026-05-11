@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#22c55e"/>
+  <ellipse cx="256" cy="335" rx="210" ry="178" fill="#ffb3c6"/>
+  <ellipse cx="158" cy="312" rx="40" ry="29" fill="#ff8fab" opacity=".45"/>
+  <ellipse cx="354" cy="312" rx="40" ry="29" fill="#ff8fab" opacity=".45"/>
+  <path d="M194 283 Q218 262 242 283" stroke="#333" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M270 283 Q294 262 318 283" stroke="#333" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M210 322 Q256 354 302 322" stroke="#333" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <text x="256" y="133" text-anchor="middle" font-family="PingFang SC,Helvetica,Arial,sans-serif" font-size="94" font-weight="900" fill="white">在哪</text>
+</svg>
