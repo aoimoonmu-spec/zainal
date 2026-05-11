@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="在哪">
+<meta name="theme-color" content="#22c55e">
+<link id="pwa-manifest" rel="manifest">
+<link rel="apple-touch-icon" id="apple-icon">
+<title>在哪</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--green:#22c55e;--green-dark:#16a34a;--pink:#ffb3c6;--pink-dark:#ff8fab;--text:#1a1a1a}
+
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  font-family:-apple-system,'PingFang SC','Helvetica Neue',Arial,sans-serif;
+}
+
+body{
+  background:var(--green);
+  display:flex;flex-direction:column;align-items:center;
+  position:relative;
+  min-height:100vh;min-height:100dvh;
+}
+
+/* ── Top bar ── */
+.top-bar{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:env(safe-area-inset-top,16px) 20px 0;
+  padding-top:calc(env(safe-area-inset-top,0px) + 16px);
+  position:relative;z-index:10;flex-shrink:0;
+}
+.app-name{
+  font-size:26px;font-weight:900;color:#fff;letter-spacing:4px;
+  text-shadow:0 2px 12px rgba(0,0,0,.15);
+}
+.menu-btn{
+  width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;
+  transition:.2s;backdrop-filter:blur(8px);
+}
+.menu-btn:active{transform:scale(.9)}
+.menu-btn svg{fill:white;width:20px;height:20px}
+
+/* ── Bubble ── */
+.bubble-wrap{
+  flex-shrink:0;
+  width:100%;display:flex;justify-content:center;
+  padding:14px 24px 0;min-height:76px;position:relative;z-index:5;
+}
+.bubble{
+  background:#fff;border-radius:22px;padding:14px 20px;
+  max-width:300px;width:100%;text-align:center;
+  font-size:16px;color:var(--text);line-height:1.6;font-weight:500;
+  box-shadow:0 6px 28px rgba(0,0,0,.12);
+  opacity:0;transform:translateY(8px) scale(.96);
+  transition:opacity .3s ease,transform .3s ease;
+  position:relative;
+}
+.bubble.show{opacity:1;transform:translateY(0) scale(1)}
+.bubble::after{
+  content:'';position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);
+  border:7px solid transparent;border-top-color:#fff;border-bottom:none;
+}
+
+/* ── Character ── */
+.char-area{
+  flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;
+  overflow:hidden;position:relative;
+}
+.char-svg{
+  width:min(92vw,420px);display:block;
+  transform-origin:bottom center;
+  animation:breathe 4s ease-in-out infinite;
+}
+@keyframes breathe{
+  0%,100%{transform:scaleY(1) translateY(0)}
+  50%{transform:scaleY(1.025) translateY(-5px)}
+}
+@keyframes bounce{
+  0%,100%{transform:translateY(0) scale(1)}
+  30%{transform:translateY(-28px) scale(1.05)}
+  60%{transform:translateY(-12px) scale(1.02)}
+}
+@keyframes shiver{
+  0%,100%{transform:rotate(0)}
+  20%{transform:rotate(-4deg)}
+  40%{transform:rotate(4deg)}
+  60%{transform:rotate(-3deg)}
+  80%{transform:rotate(3deg)}
+}
+@keyframes nod{
+  0%,100%{transform:scaleY(1)}
+  50%{transform:scaleY(.94)}
+}
+.anim-bounce{animation:bounce .55s ease-in-out 2 !important}
+.anim-shiver{animation:shiver .5s ease-in-out 2 !important}
+.anim-nod{animation:nod .4s ease-in-out 3 !important}
+
+/* eye transitions */
+#g-eyes-open{transition:opacity .2s}
+#g-eyes-closed{transition:opacity .2s}
+
+/* ── Controls ── */
+.controls{
+  flex-shrink:0;width:100%;
+  display:flex;flex-direction:column;align-items:center;
+  gap:10px;
+  padding:14px 24px calc(env(safe-area-inset-bottom,16px) + 20px);
+  background:rgba(0,0,0,.08);backdrop-filter:blur(12px);
+  position:relative;z-index:10;
+}
+.status-row{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;min-height:22px;
+}
+.status-text{font-size:14px;color:rgba(255,255,255,.85);text-align:center;font-weight:500}
+.input-row{
+  width:100%;display:flex;gap:10px;align-items:center;max-width:380px;
+}
+.text-input{
+  flex:1;height:48px;border-radius:24px;border:none;
+  background:rgba(255,255,255,.95);
+  padding:0 18px;font-size:15px;color:var(--text);
+  outline:none;box-shadow:0 2px 12px rgba(0,0,0,.1);
+  font-family:inherit;
+}
+.text-input::placeholder{color:#bbb}
+.send-btn{
+  width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 12px rgba(0,0,0,.1);transition:.2s;flex-shrink:0;
+}
+.send-btn:active{transform:scale(.9)}
+.send-btn svg{fill:var(--green-dark);width:22px;height:22px}
+.mic-btn{
+  width:68px;height:68px;border-radius:50%;border:none;cursor:pointer;
+  background:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 24px rgba(0,0,0,.18);transition:.2s;flex-shrink:0;
+}
+.mic-btn:active{transform:scale(.91)}
+.mic-btn svg{fill:var(--green-dark);width:30px;height:30px;transition:.2s}
+.mic-btn.active{background:#ff4757;animation:pulseMic 1s ease-in-out infinite}
+.mic-btn.active svg{fill:#fff}
+@keyframes pulseMic{
+  0%,100%{box-shadow:0 4px 24px rgba(255,71,87,.35)}
+  50%{box-shadow:0 4px 40px rgba(255,71,87,.6);transform:scale(1.06)}
+}
+.hint{font-size:11px;color:rgba(255,255,255,.55);text-align:center}
+
+/* ── Modal ── */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  z-index:200;opacity:0;pointer-events:none;transition:.25s;
+}
+.overlay.show{opacity:1;pointer-events:all}
+.modal{
+  background:#fff;border-radius:22px;padding:24px;width:100%;max-width:330px;
+  transform:translateY(16px);transition:.25s;
+}
+.overlay.show .modal{transform:translateY(0)}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:8px;color:var(--text)}
+.modal-desc{font-size:14px;color:#555;line-height:1.7;margin-bottom:20px}
+.modal-desc b{color:var(--green-dark)}
+.modal-desc s{color:#bbb}
+.mbtn{
+  display:block;width:100%;padding:14px;border-radius:14px;border:none;
+  font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;
+  font-family:inherit;transition:.15s;
+}
+.mbtn:active{opacity:.8}
+.mbtn:last-child{margin-bottom:0}
+.mbtn-green{background:var(--green);color:#fff}
+.mbtn-gray{background:#f2f2f2;color:#333}
+.mbtn-red{background:#fff0f0;color:#ff4757}
+
+/* ── Records panel ── */
+.records-panel{
+  position:fixed;inset:0;background:#f7f8fa;z-index:150;
+  transform:translateY(100%);transition:transform .4s cubic-bezier(.25,.46,.45,.94);
+  border-radius:22px 22px 0 0;display:flex;flex-direction:column;
+}
+.records-panel.show{transform:translateY(0)}
+.rp-header{
+  padding:20px 20px 14px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #ebebeb;flex-shrink:0;background:#fff;
+  border-radius:22px 22px 0 0;
+}
+.rp-title{font-size:19px;font-weight:800;color:var(--text)}
+.rp-close{
+  width:32px;height:32px;border-radius:50%;background:#f0f0f0;border:none;
+  font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-family:inherit;transition:.15s;
+}
+.rp-close:active{transform:scale(.88)}
+.rp-count{font-size:13px;color:#999;margin-top:2px}
+.rp-list{flex:1;overflow-y:auto;padding:8px 0 20px;-webkit-overflow-scrolling:touch}
+.rp-item{
+  display:flex;align-items:center;padding:14px 20px;
+  border-bottom:1px solid #f0f0f0;background:#fff;margin:4px 12px;
+  border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.05);
+}
+.rp-item:last-child{border-bottom:none}
+.rp-info{flex:1;min-width:0}
+.rp-name{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.rp-locs{display:flex;flex-direction:column;gap:3px}
+.rp-loc{font-size:13px;color:#666;display:flex;align-items:center;gap:5px}
+.rp-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
+.rp-del{
+  width:34px;height:34px;border-radius:10px;background:#fff0f0;border:none;
+  color:#ff4757;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-left:12px;transition:.15s;
+}
+.rp-del:active{transform:scale(.88)}
+.rp-del svg{width:15px;height:15px;fill:currentColor}
+.rp-empty{text-align:center;padding:60px 20px;color:#bbb}
+.rp-empty-icon{font-size:52px;margin-bottom:14px}
+.rp-empty-sub{font-size:13px;margin-top:6px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <div class="app-name">在哪</div>
+  <button class="menu-btn" onclick="openRecords()" title="查看记录">
+    <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+  </button>
+</div>
+
+<!-- Speech bubble -->
+<div class="bubble-wrap"><div class="bubble" id="bubble"></div></div>
+
+<!-- Character -->
+<div class="char-area">
+<svg class="char-svg" id="char" viewBox="0 0 340 290" xmlns="http://www.w3.org/2000/svg">
+  <!-- shadow -->
+  <ellipse cx="170" cy="284" rx="115" ry="9" fill="rgba(0,0,0,.1)"/>
+  <!-- body -->
+  <ellipse cx="170" cy="200" rx="158" ry="130" fill="#ffb3c6"/>
+  <!-- cheeks -->
+  <ellipse cx="88" cy="218" rx="30" ry="22" fill="#ff8fab" opacity=".45"/>
+  <ellipse cx="252" cy="218" rx="30" ry="22" fill="#ff8fab" opacity=".45"/>
+  <!-- eyes closed (default happy) -->
+  <g id="g-eyes-closed">
+    <path d="M116 175 Q131 162 146 175" stroke="#333" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+    <path d="M194 175 Q209 162 224 175" stroke="#333" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- eyes open -->
+  <g id="g-eyes-open" opacity="0">
+    <circle cx="131" cy="171" r="13" fill="#2d2d2d"/>
+    <circle cx="209" cy="171" r="13" fill="#2d2d2d"/>
+    <circle cx="136" cy="166" r="4.5" fill="white"/>
+    <circle cx="214" cy="166" r="4.5" fill="white"/>
+  </g>
+  <!-- brow surprise (hidden) -->
+  <g id="g-brows" opacity="0">
+    <path d="M116 158 Q131 150 146 158" stroke="#333" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M194 158 Q209 150 224 158" stroke="#333" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- mouth smile -->
+  <path id="m-smile" d="M140 205 Q170 228 200 205" stroke="#333" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <!-- mouth talk (oval) -->
+  <ellipse id="m-talk" cx="170" cy="210" rx="20" ry="12" fill="#333" opacity="0"/>
+  <!-- mouth sad/confused (frown) -->
+  <path id="m-sad" d="M145 215 Q170 204 195 215" stroke="#333" stroke-width="4.5" fill="none" stroke-linecap="round" opacity="0"/>
+</svg>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="status-row">
+    <div class="status-text" id="status">点击麦克风或输入文字</div>
+  </div>
+  <div class="input-row">
+    <input class="text-input" id="textInput" type="text" placeholder="说话或输入…"
+      onkeydown="if(event.key==='Enter')sendText()">
+    <button class="send-btn" onclick="sendText()" title="发送">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+    <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="语音">
+      <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+    </button>
+  </div>
+  <div class="hint" id="hint">说"充电器放在书房" 或 "充电器放哪了"</div>
+</div>
+
+<!-- Duplicate modal -->
+<div class="overlay" id="dupOverlay">
+  <div class="modal">
+    <div class="modal-title">已有记录 📦</div>
+    <div class="modal-desc" id="dupDesc"></div>
+    <button class="mbtn mbtn-green" onclick="handleDup('replace')">替换原记录</button>
+    <button class="mbtn mbtn-gray" onclick="handleDup('both')">同时保存两个</button>
+    <button class="mbtn mbtn-red" onclick="handleDup('cancel')">取消</button>
+  </div>
+</div>
+
+<!-- Records panel -->
+<div class="records-panel" id="recordsPanel">
+  <div class="rp-header">
+    <div>
+      <div class="rp-title">所有记录</div>
+      <div class="rp-count" id="rpCount"></div>
+    </div>
+    <button class="rp-close" onclick="closeRecords()">✕</button>
+  </div>
+  <div class="rp-list" id="rpList"></div>
+</div>
+
+<script>
+// ═══════════════════════════ DATA ═══════════════════════════
+const KEY = 'zainal_v2';
+let db = {};
+try { db = JSON.parse(localStorage.getItem(KEY)) || {}; } catch {}
+function persist(){ localStorage.setItem(KEY, JSON.stringify(db)); }
+
+let lastItem = null;   // last item mentioned in conversation
+let pendingDup = null; // { item, location, existingKey }
+let recog = null;
+let micOn = false;
+let bubbleTimer = null;
+
+// ═══════════════════════════ NLP ════════════════════════════
+function parse(raw){
+  const t = raw.trim().replace(/[。！？!?.，,]+$/, '').trim();
+
+  // ── delete ──
+  if(/^删除(这条|上一条|刚才的)?(记录|位置)?$/.test(t))
+    return {type:'del_last'};
+  const delMatch = t.match(/^(删除|删掉|移除)(.+?)(的记录|的位置|记录)?$/) ||
+                   t.match(/^把(.+?)(删了|删掉)$/);
+  if(delMatch){
+    const item = (delMatch[2]||delMatch[1]).trim();
+    return {type:'del', item};
+  }
+
+  // ── store ──
+  const storeRe = [
+    /^把(.+?)放(?:在|到|进)了?(.+)$/,
+    /^(.+?)放(?:在|到|进)了(.+)$/,
+    /^(.+?)放(?:在|到|进)(.+)$/,
+    /^(.+?)(?:存|放|塞|收|搁)在(.+)$/,
+    /^记(?:住|录|一下)[，,]?(.+?)(?:在|放在)(.+)$/,
+    /^(.+?)就在(.+)$/,
+  ];
+  for(const re of storeRe){
+    const m = t.match(re);
+    if(m){
+      let item = m[1].trim().replace(/^把/,'').trim();
+      let loc  = m[2].trim();
+      if(item && loc && !loc.includes('哪') && item.length<=20 && loc.length<=50)
+        return {type:'store', item, loc};
+    }
+  }
+
+  // ── query ──
+  const queryRe = [
+    /^(.+?)(?:放|在)哪(?:里|儿|了)?$/,
+    /^(.+?)去哪(?:了|儿)?$/,
+    /^帮我找(?:一下)?(.+?)$/,
+    /^我的(.+?)在哪/,
+    /^(.+?)在什么地方$/,
+    /^(?:找|寻找)(.+)$/,
+  ];
+  for(const re of queryRe){
+    const m = t.match(re);
+    if(m){
+      const item = m[1].trim().replace(/^我的/,'').trim();
+      if(item) return {type:'query', item};
+    }
+  }
+
+  return {type:'?', raw:t};
+}
+
+function fuzzyFind(name){
+  if(db[name]) return name;
+  for(const k of Object.keys(db))
+    if(k.includes(name)||name.includes(k)) return k;
+  return null;
+}
+
+// ═══════════════════════════ COMMANDS ═══════════════════════
+function run(text){
+  if(!text.trim()) return;
+  const cmd = parse(text);
+
+  if(cmd.type==='store')  doStore(cmd.item, cmd.loc);
+  else if(cmd.type==='query')  doQuery(cmd.item);
+  else if(cmd.type==='del_last') doDelLast();
+  else if(cmd.type==='del')     doDel(cmd.item);
+  else{
+    face('confused');
+    say('没听懂 🤔\n可以说：\n"充电器放在书房"\n"充电器放哪了"\n"删除这条记录"', 4000);
+  }
+}
+
+function doStore(item, loc){
+  const existKey = fuzzyFind(item);
+  if(existKey){
+    if(db[existKey].includes(loc)){
+      face('talk');
+      say(`"${existKey}" 在 ${loc}，\n我已经知道了！`);
+      return;
+    }
+    pendingDup = {item, loc, existKey};
+    showDup(existKey, db[existKey], loc);
+    return;
+  }
+  db[item] = [loc];
+  persist();
+  lastItem = item;
+  face('happy');
+  say(`知道啦！✨\n${item} 在 ${loc}`);
+}
+
+function doQuery(item){
+  const k = fuzzyFind(item);
+  lastItem = k || item;
+  if(k){
+    const locs = db[k];
+    face('talk');
+    if(locs.length===1)
+      say(`${k} 在\n${locs[0]}`);
+    else
+      say(`${k} 有 ${locs.length} 个位置：\n`+locs.map((l,i)=>`${i+1}. ${l}`).join('\n'));
+  } else {
+    face('confused');
+    say(`我还不知道 "${item}" 在哪\n告诉我它在哪吧 😊`, 3500);
+  }
+}
+
+function doDelLast(){
+  if(!lastItem || !db[lastItem]){
+    face('confused');
+    say('没有可以删除的记录');
+    return;
+  }
+  const item = lastItem;
+  delete db[item];
+  persist();
+  lastItem = null;
+  face('happy');
+  say(`已删除 "${item}" 的记录`);
+}
+
+function doDel(item){
+  const k = fuzzyFind(item);
+  if(k){
+    delete db[k];
+    persist();
+    if(lastItem===k) lastItem=null;
+    face('happy');
+    say(`已删除 "${k}" 的记录 🗑️`);
+  } else {
+    face('confused');
+    say(`没找到 "${item}" 的记录`);
+  }
+}
+
+// ═══════════════════════════ DUP MODAL ══════════════════════
+function showDup(key, oldLocs, newLoc){
+  const el = document.getElementById('dupDesc');
+  el.innerHTML = `"<b>${key}</b>" 原来在<br><s>${oldLocs.join('、')}</s><br>新位置：<b>${newLoc}</b>`;
+  document.getElementById('dupOverlay').classList.add('show');
+}
+function handleDup(act){
+  document.getElementById('dupOverlay').classList.remove('show');
+  if(!pendingDup) return;
+  const {item, loc, existKey} = pendingDup;
+  pendingDup = null;
+  if(act==='cancel') return;
+  if(act==='replace'){
+    db[existKey]=[loc]; persist(); lastItem=existKey;
+    face('happy'); say(`更新了！\n${existKey} 现在在\n${loc}`);
+  } else {
+    if(!db[existKey].includes(loc)) db[existKey].push(loc);
+    persist(); lastItem=existKey;
+    face('happy'); say(`两个都记好了！\n${existKey} 有 ${db[existKey].length} 个位置`);
+  }
+}
+
+// ═══════════════════════════ SPEECH ═════════════════════════
+function initRecog(){
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return null;
+  const r = new SR();
+  r.lang='zh-CN'; r.continuous=false; r.interimResults=true; r.maxAlternatives=1;
+  r.onstart=()=>{ micOn=true; setMicUI(true); setStatus('正在听…'); };
+  r.onresult=(e)=>{
+    const res=e.results[e.results.length-1];
+    const txt=res[0].transcript;
+    if(res.isFinal){ setStatus(`"${txt}"`); run(txt); }
+    else setStatus(txt+'…');
+  };
+  r.onerror=(e)=>{
+    micOn=false; setMicUI(false);
+    if(e.error==='no-speech'){
+      setStatus('没有检测到声音');
+    } else if(e.error==='not-allowed' || e.error==='service-not-allowed'){
+      setStatus('麦克风被拒绝（'+e.error+'）');
+      if(location.protocol==='file:'){
+        say('本地文件无法使用语音识别\n请用文字输入框代替\n\n或将文件放到 Web 服务器上');
+      } else {
+        say('请点击地址栏左侧图标\n找到"麦克风"并选择"允许"\n然后刷新页面重试');
+      }
+    } else {
+      setStatus('语音错误：'+e.error);
+    }
+  };
+  r.onend=()=>{ micOn=false; setMicUI(false); };
+  return r;
+}
+
+function toggleMic(){
+  if(!recog) recog=initRecog();
+  if(!recog){
+    say('您的浏览器不支持语音识别\n请使用 Chrome 浏览器，或在下方输入文字');
+    document.getElementById('hint').textContent='请使用 Chrome 浏览器';
+    return;
+  }
+  if(micOn){ recog.stop(); }
+  else{
+    try{ recog.start(); }
+    catch{ recog=initRecog(); if(recog) recog.start(); }
+  }
+}
+
+function sendText(){
+  const inp=document.getElementById('textInput');
+  const v=inp.value.trim();
+  if(!v) return;
+  setStatus(`"${v}"`);
+  run(v);
+  inp.value='';
+}
+
+// ═══════════════════════════ UI HELPERS ═════════════════════
+function say(text, ms=3500){
+  clearTimeout(bubbleTimer);
+  const el=document.getElementById('bubble');
+  el.innerHTML=text.replace(/\n/g,'<br>');
+  el.classList.add('show');
+  bubbleTimer=setTimeout(()=>el.classList.remove('show'), ms);
+}
+
+function setStatus(t){ document.getElementById('status').textContent=t; }
+
+function setMicUI(on){
+  const btn=document.getElementById('micBtn');
+  on ? btn.classList.add('active') : btn.classList.remove('active');
+}
+
+// character states
+const charEl=document.getElementById('char');
+const gEyesC=document.getElementById('g-eyes-closed');
+const gEyesO=document.getElementById('g-eyes-open');
+const gBrows=document.getElementById('g-brows');
+const mSmile=document.getElementById('m-smile');
+const mTalk =document.getElementById('m-talk');
+const mSad  =document.getElementById('m-sad');
+
+function face(state){
+  // reset
+  charEl.className='char-svg';
+  gEyesC.setAttribute('opacity','1');
+  gEyesO.setAttribute('opacity','0');
+  gBrows.setAttribute('opacity','0');
+  mSmile.setAttribute('opacity','1');
+  mTalk .setAttribute('opacity','0');
+  mSad  .setAttribute('opacity','0');
+
+  switch(state){
+    case'happy':
+      charEl.classList.add('anim-bounce');
+      gEyesO.setAttribute('opacity','1');
+      gEyesC.setAttribute('opacity','0');
+      setTimeout(()=>face('idle'),1800);
+      break;
+    case'talk':
+      gEyesO.setAttribute('opacity','1');
+      gEyesC.setAttribute('opacity','0');
+      mSmile.setAttribute('opacity','0');
+      mTalk .setAttribute('opacity','1');
+      setTimeout(()=>face('idle'),3000);
+      break;
+    case'confused':
+      charEl.classList.add('anim-shiver');
+      mSmile.setAttribute('opacity','0');
+      mSad  .setAttribute('opacity','1');
+      gBrows.setAttribute('opacity','1');
+      setTimeout(()=>face('idle'),2500);
+      break;
+    case'idle':
+    default:
+      charEl.style.animation='breathe 4s ease-in-out infinite';
+      break;
+  }
+}
+
+// ═══════════════════════════ RECORDS ════════════════════════
+function openRecords(){
+  renderRP();
+  document.getElementById('recordsPanel').classList.add('show');
+}
+function closeRecords(){
+  document.getElementById('recordsPanel').classList.remove('show');
+}
+
+function renderRP(){
+  const keys=Object.keys(db).sort();
+  const cnt=document.getElementById('rpCount');
+  const list=document.getElementById('rpList');
+  cnt.textContent=keys.length?`共 ${keys.length} 件物品`:'';
+  if(!keys.length){
+    list.innerHTML=`<div class="rp-empty">
+      <div class="rp-empty-icon">📦</div>
+      <div style="font-size:15px;font-weight:600">还没有任何记录</div>
+      <div class="rp-empty-sub">说 "充电器放在书房"<br>来添加第一条记录</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML=keys.map(k=>`
+    <div class="rp-item">
+      <div class="rp-info">
+        <div class="rp-name">${esc(k)}</div>
+        <div class="rp-locs">${db[k].map(l=>`
+          <div class="rp-loc"><div class="rp-dot"></div>${esc(l)}</div>
+        `).join('')}</div>
+      </div>
+      <button class="rp-del" onclick="rpDel('${esc(k)}')">
+        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+function rpDel(item){
+  if(!confirm(`确定删除 "${item}" 的记录吗？`)) return;
+  delete db[item]; persist();
+  if(lastItem===item) lastItem=null;
+  renderRP();
+}
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════ INIT ═══════════════════════════
+face('idle');
+
+// Warn on file:// — Chrome blocks Speech API on local files
+if(location.protocol==='file:'){
+  document.getElementById('hint').innerHTML=
+    '⚠️ 本地文件语音受限，请使用<b style="color:#fff">文字输入框</b>';
+}
+
+// ─── PWA manifest (inline, works as single file) ───
+(function(){
+  const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="112" fill="#22c55e"/>
+    <ellipse cx="256" cy="320" rx="195" ry="165" fill="#ffb3c6"/>
+    <ellipse cx="165" cy="295" rx="35" ry="26" fill="#ff8fab" opacity=".45"/>
+    <ellipse cx="347" cy="295" rx="35" ry="26" fill="#ff8fab" opacity=".45"/>
+    <path d="M200 270 Q220 252 240 270" stroke="#333" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M272 270 Q292 252 312 270" stroke="#333" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M215 308 Q256 338 297 308" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <text x="256" y="130" text-anchor="middle" font-family="PingFang SC,sans-serif"
+      font-size="100" font-weight="900" fill="white">在哪</text>
+  </svg>`;
+  const iconUrl = 'data:image/svg+xml,' + encodeURIComponent(iconSvg);
+  document.getElementById('apple-icon').href = iconUrl;
+
+  const manifest = {
+    name: '在哪 — 找东西神器',
+    short_name: '在哪',
+    description: '语音记录物品位置，随时查找',
+    start_url: './',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#22c55e',
+    theme_color: '#22c55e',
+    lang: 'zh-CN',
+    icons: [
+      { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+})();
+
+// ─── Service Worker (offline support) ───
+if('serviceWorker' in navigator && location.protocol !== 'file:'){
+  const swCode = `
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open('zainal-v1').then(c => c.addAll(['./', './index.html']))
+      .catch(()=>{})
+  );
+  self.skipWaiting();
+});
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('./')))
+  );
+});`;
+  const swBlob = new Blob([swCode], {type:'text/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+}
+
+// Close records on outside tap
+document.getElementById('dupOverlay').addEventListener('click',function(e){
+  if(e.target===this) handleDup('cancel');
+});
+</script>
+</body>
+</html>
